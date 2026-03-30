@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Intelligence Dashboard</title>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Modern typography via Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #60a5fa;
+            --border: rgba(255, 255, 255, 0.1);
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at top left, #1e293b, #0f172a);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism premium design feature */
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        header {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .container {
+            flex: 1;
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+        }
+
+        .controls {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: fit-content;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        select, button {
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.6);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        button {
+            background: var(--accent);
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .dashboard-main {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-card {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .summary-title {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .summary-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .chart-container {
+            padding: 24px;
+            height: 500px;
+            position: relative;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--card-bg);
+            backdrop-filter: blur(5px);
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.875rem;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1><i class="fas fa-chart-line"></i> StockIntel</h1>
+        <div style="font-size: 0.875rem; color: var(--text-muted);">
+            Data Engine: yfinance &middot; UI: Glassmorphism
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Sidebar Controls -->
+        <aside class="controls glass">
+            <div class="control-group">
+                <label for="company-select">Select Company</label>
+                <select id="company-select">
+                    <option value="" disabled selected>Loading Data...</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="timeframe-select">Timeframe</label>
+                <select id="timeframe-select">
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="365">Last 1 Year</option>
+                </select>
+            </div>
+            
+            <button id="fetch-btn" onclick="fetchDashboardData()">
+                <i class="fas fa-sync-alt"></i> Run AI Analysis
+            </button>
+            <div id="error-message" class="error-msg"></div>
+
+            <div style="margin-top: 20px; font-size: 0.875rem; color: var(--text-muted);">
+                <p><strong>Metrics Included:</strong></p>
+                <ul style="padding-left: 20px; line-height: 1.6;">
+                    <li>30-Day Price Trend Tracking</li>
+                    <li>7-Day Moving Avg Context</li>
+                    <li>Volatility Index (Std Dev)</li>
+                    <li>Linear Regression Prediction</li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard-main">
+            <!-- Market Movers -->
+            <div class="summary-grid" style="margin-bottom: -10px;">
+                <div class="summary-card glass" style="border-left: 4px solid var(--success); padding: 16px 24px;">
+                    <div class="summary-title"><i class="fas fa-arrow-up"></i> Top Gainer (Today)</div>
+                    <div class="summary-value" id="top-gainer" style="font-size: 1.2rem;">Loading...</div>
+                </div>
+                <div class="summary-card glass" style="border-left: 4px solid var(--danger); padding: 16px 24px;">
+                    <div class="summary-title"><i class="fas fa-arrow-down"></i> Top Loser (Today)</div>
+                    <div class="summary-value" id="top-loser" style="font-size: 1.2rem;">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Key Value Summary Modules -->
+            <div class="summary-grid">
+                <div class="summary-card glass">
+                    <div class="summary-title">Latest Close Price</div>
+                    <div class="summary-value" id="val-close">--</div>
+                </div>
+                <div class="summary-card glass">
+                    <div class="summary-title">52-Week High Range</div>
+                    <div class="summary-value" id="val-high" style="color: var(--success);">--</div>
+                </div>
+                <div class="summary-card glass">
+                    <div class="summary-title">52-Week Low Range</div>
+                    <div class="summary-value" id="val-low" style="color: var(--danger);">--</div>
+                </div>
+                <div class="summary-card glass">
+                    <div class="summary-title">Average Close (1Y)</div>
+                    <div class="summary-value" id="val-avg">--</div>
+                </div>
+            </div>
+
+            <!-- Real-Time Chart Area -->
+            <div class="chart-container glass">
+                <div class="loading-overlay" id="chart-loading">
+                    <div class="spinner"></div>
+                </div>
+                <div class="chart-header">
+                    <div class="chart-title">Visual Price Performance (Trailing 30 Days)</div>
+                </div>
+                <canvas id="stockChart"></canvas>
+            </div>
+            
+            <!-- Statistical Compare Section (Advanced Feature Bonus) -->
+            <div class="chart-container glass" style="height: auto; padding: 24px;">
+                <div class="chart-title" style="margin-bottom: 20px;">Stock Alpha Comparison Engine (<i class="fas fa-bolt"></i> Bonus)</div>
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="control-group" style="flex:1; min-width: 200px;">
+                        <label>Asset 1</label>
+                        <select id="comp-select-1"></select>
+                    </div>
+                    <div class="control-group" style="flex:1; min-width: 200px;">
+                        <label>Asset 2</label>
+                        <select id="comp-select-2"></select>
+                    </div>
+                    <button onclick="compareStocks()" style="height: 46px;">Initialize Comparison</button>
+                </div>
+                <div id="comp-results" style="margin-top: 20px; display: none; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                    <!-- Results dynamically injected -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        let stockChart = null;
+
+        // Initialize API mapping
+        async function init() {
+            try {
+                const response = await fetch('/companies');
+                const companies = await response.json();
+                
+                const select = document.getElementById('company-select');
+                const comp1 = document.getElementById('comp-select-1');
+                const comp2 = document.getElementById('comp-select-2');
+                
+                select.innerHTML = '';
+                comp1.innerHTML = '';
+                comp2.innerHTML = '';
+                
+                companies.forEach((c) => {
+                    const str = `${c.name} (${c.symbol})`;
+                    select.add(new Option(str, c.symbol));
+                    comp1.add(new Option(str, c.symbol));
+                    comp2.add(new Option(str, c.symbol));
+                });
+                
+                if (companies.length > 0) {
+                    if(companies.length > 1) {
+                        comp2.selectedIndex = 1;
+                    }
+                    fetchDashboardData();
+                    fetchTopMovers();
+                }
+            } catch (error) {
+                showError("Core mapping API down. Ensure FastAPI is running on port 8000.");
+            }
+        }
+
+        async function fetchTopMovers() {
+            try {
+                const res = await fetch('/top-movers');
+                const data = await res.json();
+                
+                if (data.top_gainer) {
+                    const g = data.top_gainer;
+                    document.getElementById('top-gainer').innerHTML = `${g.symbol} <span style="color: var(--success)">+${g.change_pct}%</span>`;
+                }
+                if (data.top_loser) {
+                    const l = data.top_loser;
+                    const sign = l.change_pct > 0 ? '+' : '';
+                    document.getElementById('top-loser').innerHTML = `${l.symbol} <span style="color: var(--danger)">${sign}${l.change_pct}%</span>`;
+                }
+            } catch (e) {
+                console.error("Failed to load movers", e);
+                document.getElementById('top-gainer').innerHTML = "N/A";
+                document.getElementById('top-loser').innerHTML = "N/A";
+            }
+        }
+
+        // Orchestrator for metric fetching
+        async function fetchDashboardData() {
+            const symbol = document.getElementById('company-select').value;
+            const days = document.getElementById('timeframe-select').value;
+            if (!symbol) return;
+
+            hideError();
+            document.getElementById('chart-loading').classList.add('active');
+
+            try {
+                const [dataRes, summaryRes] = await Promise.all([
+                    fetch(`/data/${symbol}?days=${days}`),
+                    fetch(`/summary/${symbol}`)
+                ]);
+
+                if (!dataRes.ok || !summaryRes.ok) throw new Error("API Failure Block");
+
+                const dataJson = await dataRes.json();
+                const summary = await summaryRes.json();
+
+                updateSummaryCards(summary);
+                renderChart(dataJson.data);
+
+            } catch (error) {
+                showError("Fatal error orchestrating stock dataset mapping.");
+                console.error(error);
+            } finally {
+                document.getElementById('chart-loading').classList.remove('active');
+            }
+        }
+
+        // DOM Manipulator for Summary
+        function updateSummaryCards(summary) {
+            const fmt = (num) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(num);
+            
+            document.getElementById('val-close').textContent = fmt(summary.last_close_price);
+            document.getElementById('val-high').textContent = fmt(summary['52_week_high']);
+            document.getElementById('val-low').textContent = fmt(summary['52_week_low']);
+            document.getElementById('val-avg').textContent = fmt(summary.average_close_price);
+        }
+
+        // Canvas mapping layer via Chart.js
+        function renderChart(data) {
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            
+            const labels = data.map(d => d.Date ? d.Date.split('T')[0] : '');
+            const prices = data.map(d => d.Close);
+            const ma7 = data.map(d => d['7_Day_MA']);
+            const trend = data.map(d => d['Prediction_Trend']); // Linear Regression mapping
+
+            if (stockChart) {
+                stockChart.destroy();
+            }
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = 'Inter';
+
+            stockChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Standard Close Price',
+                            data: prices,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3
+                        },
+                        {
+                            label: '7-Day Exponential Moving Avg',
+                            data: ma7,
+                            borderColor: '#a78bfa',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'ML Trend Logic Engine',
+                            data: trend,
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 6 } },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            padding: 12
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false } },
+                        y: { 
+                            grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                            ticks: { callback: function(value) { return '₹' + value; } }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Asynchronous Bonus API Connector
+        async function compareStocks() {
+            const sym1 = document.getElementById('comp-select-1').value;
+            const sym2 = document.getElementById('comp-select-2').value;
+            const resDiv = document.getElementById('comp-results');
+            
+            if(sym1 === sym2) {
+                alert("Please select different assets to invoke comparison engine.");
+                return;
+            }
+            
+            resDiv.style.display = 'block';
+            resDiv.innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin: 0 auto;"></div>';
+            
+            try {
+                const res = await fetch(`/compare?symbol1=${sym1}&symbol2=${sym2}`);
+                if (!res.ok) throw new Error("Statistical node offline");
+                const data = await res.json();
+                
+                const d1 = data.details[sym1];
+                const d2 = data.details[sym2];
+                const corr = data.details.correlation;
+                
+                let corrText = "Neutral Target";
+                if (corr > 0.7) corrText = "High Tandem (Positive)";
+                else if (corr < -0.7) corrText = "Distinct (Inverse Sequence)";
+                
+                resDiv.innerHTML = `
+                    <h4 style="margin-top:0; margin-bottom: 10px; color: var(--text-main);">Rolling Output (Last 3 Months Analytical Sequence)</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <strong style="color:var(--accent);">${sym1}</strong><br>
+                            Baseline Yield Margin: <strong style="color: ${d1.return_percent >= 0 ? 'var(--success)' : 'var(--danger)'}">${d1.return_percent}%</strong><br>
+                            Systemic Volatility Vector: ${d1.annualized_volatility_percent}%
+                        </div>
+                        <div>
+                            <strong style="color:var(--accent);">${sym2}</strong><br>
+                            Baseline Yield Margin: <strong style="color: ${d2.return_percent >= 0 ? 'var(--success)' : 'var(--danger)'}">${d2.return_percent}%</strong><br>
+                            Systemic Volatility Vector: ${d2.annualized_volatility_percent}%
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
+                        <strong>Cross-Asset Correlation Margin:</strong> ${corr} <span style="color: var(--accent);">(${corrText})</span>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
+                            (Scores range from -1 to 1. Positive values track together. Ideal portfolio spreads use lower correlation indexes.)
+                        </div>
+                    </div>
+                `;
+                
+            } catch (err) {
+                resDiv.innerHTML = `<span style="color: var(--danger)">Statistical comparison cluster node is unresponsive.</span>`;
+                console.error(err);
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error-message');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        // Initialize engine strictly after base DOM loading
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
